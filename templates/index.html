@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MySQL 数据库互导程序</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-database"></i> MySQL 数据库互导程序
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link active" href="/">
+                    <i class="fas fa-home"></i> 首页
+                </a>
+                <a class="nav-link" href="/config">
+                    <i class="fas fa-cog"></i> 配置管理
+                </a>
+                <a class="nav-link" href="/history">
+                    <i class="fas fa-history"></i> 导入历史
+                </a>
+                <button class="btn btn-outline-light btn-sm ms-2" id="emergencyReset" title="如果页面卡住，点击此按钮恢复">
+                    <i class="fas fa-refresh"></i> 恢复
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid">
+        <div class="row">
+            <!-- 左侧配置区域 -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h4><i class="fas fa-database"></i> 数据库配置</h4>
+                    </div>
+                    <div class="card-body">
+                        <!-- 源数据库表选择 -->
+                        <div class="mb-3">
+                            <label class="form-label">源数据库表</label>
+                            <div class="input-group">
+                                <select class="form-select" id="sourceTable">
+                                    <option value="">请选择源表...</option>
+                                </select>
+                                <button class="btn btn-outline-secondary" type="button" id="loadSourceTables">
+                                    <i class="fas fa-sync"></i> 刷新
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- 目标数据库表选择 -->
+                        <div class="mb-3">
+                            <label class="form-label">目标数据库表</label>
+                            <div class="input-group">
+                                <select class="form-select" id="targetTable">
+                                    <option value="">请选择目标表...</option>
+                                </select>
+                                <button class="btn btn-outline-secondary" type="button" id="loadTargetTables">
+                                    <i class="fas fa-sync"></i> 刷新
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- 导入模式选择 -->
+                        <div class="mb-3">
+                            <label class="form-label">导入模式</label>
+                            <select class="form-select" id="importMode">
+                                {% for key, value in import_modes.items() %}
+                                <option value="{{ key }}">{{ value }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- 字段映射按钮 -->
+                        <div class="mb-3">
+                            <button class="btn btn-primary" id="loadFields" disabled>
+                                <i class="fas fa-link"></i> 加载字段映射
+                            </button>
+                            <button class="btn btn-info" id="previewData" disabled>
+                                <i class="fas fa-eye"></i> 预览数据
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 字段映射区域 -->
+                <div class="card mt-3" id="fieldMappingCard" style="display: none;">
+                    <div class="card-header">
+                        <h5><i class="fas fa-exchange-alt"></i> 字段映射</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-bordered" id="fieldMappingTable">
+                                <thead>
+                                    <tr>
+                                        <th>目标表字段</th>
+                                        <th>字段类型</th>
+                                        <th>源表字段</th>
+                                        <th>默认值</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="fieldMappingBody">
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="mt-3">
+                            <button class="btn btn-success" id="startImport" disabled>
+                                <i class="fas fa-play"></i> 开始导入
+                            </button>
+                            <button class="btn btn-secondary" id="resetMapping">
+                                <i class="fas fa-undo"></i> 重置映射
+                            </button>
+                            <button class="btn btn-warning" id="backupData" disabled>
+                                <i class="fas fa-save"></i> 备份数据
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右侧日志区域 -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h4><i class="fas fa-terminal"></i> 导入日志</h4>
+                        <div>
+                            <button class="btn btn-sm btn-outline-secondary" id="clearLog">
+                                <i class="fas fa-trash"></i> 清空
+                            </button>
+                            <button class="btn btn-sm btn-outline-primary" id="refreshLog">
+                                <i class="fas fa-sync"></i> 刷新
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="log-container" id="logContainer">
+                            <div class="text-muted text-center py-3">
+                                <i class="fas fa-info-circle"></i> 等待导入任务开始...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 进度条 -->
+                <div class="card mt-3" id="progressCard" style="display: none;">
+                    <div class="card-body">
+                        <h6>导入进度</h6>
+                        <div class="progress">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                 role="progressbar" style="width: 0%" id="progressBar">
+                                0%
+                            </div>
+                        </div>
+                        <small class="text-muted" id="progressText">准备中...</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 加载提示模态框 -->
+    <div class="modal fade" id="loadingModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-body text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">加载中...</span>
+                    </div>
+                    <div class="mt-3">
+                        <h5>正在处理...</h5>
+                        <p class="text-muted" id="loadingText">请稍候</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 成功提示模态框 -->
+    <div class="modal fade" id="successModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-body text-center">
+                    <div class="text-success mb-3">
+                        <i class="fas fa-check-circle fa-3x"></i>
+                    </div>
+                    <h5>操作成功</h5>
+                    <p class="text-muted" id="successMessage">操作已完成</p>
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">确定</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 数据预览模态框 -->
+    <div class="modal fade" id="previewModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-eye"></i> 源表数据预览
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover" id="previewTable">
+                            <thead id="previewTableHead">
+                            </thead>
+                            <tbody id="previewTableBody">
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="text-muted small mt-2">
+                        <i class="fas fa-info-circle"></i> 
+                        显示前 <span id="previewCount">10</span> 条记录，仅用于预览数据格式
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 备份数据模态框 -->
+    <div class="modal fade" id="backupModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-save"></i> 备份数据
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">目标表</label>
+                        <input type="text" class="form-control" id="backupTargetTable" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">备份表名</label>
+                        <input type="text" class="form-control" id="backupTableName" placeholder="自动生成">
+                        <div class="form-text">留空将自动生成备份表名</div>
+                    </div>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        备份将创建目标表的完整副本，包含所有数据和结构。
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-warning" id="confirmBackup">
+                        <i class="fas fa-save"></i> 确认备份
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 错误提示模态框 -->
+    <div class="modal fade" id="errorModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-body text-center">
+                    <div class="text-danger mb-3">
+                        <i class="fas fa-exclamation-triangle fa-3x"></i>
+                    </div>
+                    <h5>操作失败</h5>
+                    <p class="text-muted" id="errorMessage">发生错误</p>
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">确定</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
