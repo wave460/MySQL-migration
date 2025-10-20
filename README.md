@@ -107,8 +107,8 @@ MySQL 数据库互导程序是一个基于 Python Flask 框架开发的 Web 应�
 
 ```bash
 # 克隆项目
-git clone https://github.com/your-repo/mysql-data-migration.git
-cd mysql-data-migration
+git clone https://github.com/wave460/MySQL-migration.git
+cd MySQL-migration
 
 # 安装依赖
 pip install -r requirements.txt
@@ -171,7 +171,7 @@ mysql --version
 
 ```bash
 # 1. 克隆项目
-git clone https://github.com/your-repo/mysql-data-migration.git
+git clone https://github.com/wave460/MySQL-migration.git
 cd mysql-data-migration
 
 # 2. 创建虚拟环境（推荐）
@@ -589,8 +589,8 @@ find logs/ -name "*.log" -mtime +30 -delete
 ### 开发环境设置
 ```bash
 # 克隆项目
-git clone https://github.com/your-repo/mysql-data-migration.git
-cd mysql-data-migration
+git clone https://github.com/wave460/MySQL-migration.git
+cd mysql-migration
 
 # 创建开发分支
 git checkout -b feature/your-feature
@@ -632,8 +632,8 @@ git commit -m "style: 代码格式调整"
 
 ### 联系方式
 - **技术支持**: [一码工坊](http://www.wangyiyi.net)
-- **项目主页**: https://github.com/your-repo/mysql-data-migration
-- **问题反馈**: https://github.com/your-repo/mysql-data-migration/issues
+- **项目主页**:https://github.com/wave460/MySQL-migration.git
+- **问题反馈**: https://github.com/wave460/MySQL-migration/issues
 
 ---
 
